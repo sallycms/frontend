@@ -12,7 +12,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
 		$file = sly_get('sly_asset', 'string');
 
-		if (isset($_GET['sly_asset']) && mb_strlen($file) === 0) {
+		if (mb_strlen($file) === 0) {
 			header('HTTP/1.0 400 Bad Request');
 			die;
 		}
