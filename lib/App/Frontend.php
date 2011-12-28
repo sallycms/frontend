@@ -66,7 +66,7 @@ class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
 
 		// if we got a string, wrap it in the layout and then in the response object
 		if (is_string($content)) {
-			$response->setContent($content);
+			$this->handleStringResponse($response, $content, 'frontend');
 		}
 
 		// if we got a response, use that one
