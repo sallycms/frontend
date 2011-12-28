@@ -8,8 +8,9 @@
  * http://www.opensource.org/licenses/mit-license.php
  */
 
-class sly_App_Frontend {
-	const CONTROLLER_PARAM = 'slycontroller';
+class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
+	const CONTROLLER_PARAM = 'slycontroller';  ///< string  the request param that contains the page
+	const ACTION_PARAM     = 'slyaction';      ///< string  the request param that contains the action
 
 	public function initialize() {
 		$config  = sly_Core::config();
@@ -17,25 +18,15 @@ class sly_App_Frontend {
 
 		// Setup?
 		if (!isset($_GET['sly_asset']) && $isSetup) {
-			header('Location: backend/index.php');
-			exit('Bitte führe das <a href="backend/index.php">Setup</a> aus, um SallyCMS zu nutzen.');
+			$target = sly_Util_HTTP::getBaseUrl(true).'/backend/';
+			header('Location: '.$target);
+			exit('Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.');
 		}
 
 		// init i18n (TODO: This makes no sense... but addOns require the i18n object to be present)
-		sly_Core::setI18N(new sly_I18N(sly_Core::getDefaultLocale(), SLY_SALLYFOLDER.'/backend/lang'));
+		sly_Core::setI18N(new sly_I18N(sly_Core::getDefaultLocale(), SLY_DEVELOPFOLDER.'/lang'));
 
-		// instantiate asset service before addOns are loaded to make sure
-		// the Scaffold CSS processing is first in the line for CSS files
-		sly_Service_Factory::getAssetService();
-
-		// include AddOns
-		sly_Core::loadAddons();
-
-		// register listeners
-		sly_Core::registerListeners();
-
-		// refresh cache
-		if (sly_Core::isDeveloperMode()) $this->syncDevelopFiles($isSetup);
+		parent::initialize();
 	}
 
 	public function run() {
@@ -46,25 +37,36 @@ class sly_App_Frontend {
 		// (addOns had a shot at modifying it)
 		$response = sly_Core::getResponse();
 
-		// get page and action from the current request
-		$page   = $this->controller === null ? $this->findPage() : $this->controller;
-		$action = $this->getAction('index');
+		// find controller
+		$router = new sly_Router_Base(array(
+			'/sally/:controller/:action',
+			'/sally/:controller'
+		));
+
+		// if no special controller was found, we use the article controller
+		if (!$router->hasMatch()) {
+			$controller = sly_request(self::CONTROLLER_PARAM, 'string', 'article');
+			$action     = sly_request(self::ACTION_PARAM, 'string', 'index');
+		}
+		else {
+			$controller = $router->get('controller');
+			$action     = $router->get('action', 'index');
+		}
 
 		// let the core know where we are
-		self::$currentPage = $page;
+		$this->controller = $controller;
+		$this->action     = $action;
 
 		// notify the addOns
-		sly_Core::dispatcher()->notify('PAGE_CHECKED', $page, compact('action'));
+		$this->notifySystemOfController();
 
 		// do it, baby
-		$content  = $this->dispatch($page, $action);
+		$content  = $this->dispatch($controller, $action);
 		$response = sly_Core::getResponse(); // re-fetch the current global response
 
 		// if we got a string, wrap it in the layout and then in the response object
 		if (is_string($content)) {
-			$layout->setContent($content);
-			$payload = $layout->render();
-			$response->setContent($payload);
+			$response->setContent($content);
 		}
 
 		// if we got a response, use that one
@@ -81,164 +83,29 @@ class sly_App_Frontend {
 		$response->send();
 	}
 
-	public function dispatch($page, $action) {
-		$pageResponse = $this->runPage($page, $action);
-
-		// register the new response, if the controller returned one
-		if ($pageResponse instanceof sly_Response) {
-			sly_Core::setResponse($pageResponse);
-		}
-
-		// if the controller returned another action, execute it
-		if ($pageResponse instanceof sly_Response_Action) {
-			$pageResponse = $pageResponse->execute($this);
-		}
-
-		return $pageResponse;
+	public function getControllerClassPrefix() {
+		return 'sly_Controller_Frontend';
 	}
 
-	public function runPage($controller, $action) {
-		$response = sly_Core::getResponse();
-
-		try {
-			// prepare controller
-			$method = $action; // TODO: make this $action.'Action'
-
-			if (!($controller instanceof sly_Controller_Backend)) {
-				$className  = $this->getControllerClass($controller);
-				$controller = new $className();
-			}
-
-			if (!($controller instanceof sly_Controller_Backend)) {
-				throw new sly_Controller_Exception(t('does_not_implement', $className, 'sly_Controller_Backend'));
-			}
-
-			if (!method_exists($controller, $method)) {
-				throw new sly_Controller_Exception(t('unknown_action', $method, $className), 404);
-			}
-
-			ob_start();
-
-			// init the controller
-			$r = $controller->init($method, $response);
-			if ($r instanceof sly_Response) { ob_end_clean(); return $r; }
-
-			// run the action method
-			$r = $controller->$method($response);
-			if ($r instanceof sly_Response) { ob_end_clean(); return $r; }
-
-			// and tear it down
-			$r = $controller->teardown($method, $response);
-			if ($r instanceof sly_Response) { ob_end_clean(); return $r; }
-
-			// collect output
-			return ob_get_clean();
-		}
-		catch (Exception $e) {
-			// throw away all content (including notices and warnings)
-			sly_Core::getLayout()->closeAllBuffers();
-
-			// manually create the error controller to pass the exception
-			$controller = new sly_Controller_Error($e);
-
-			// forward to the error page
-			return new sly_Response_Forward($controller, 'index');
-		}
+	public function getCurrentController() {
+		return $this->controller;
 	}
 
-	protected function syncDevelopFiles($isSetup) {
-		if (!$isSetup) {
-			sly_Service_Factory::getTemplateService()->refresh();
-			sly_Service_Factory::getModuleService()->refresh();
+	public function getCurrentAction() {
+		return $this->action;
+	}
+
+	protected function handleControllerError(Exception $e, $controller, $action) {
+		// throw away all content (including notices and warnings)
+		while (ob_get_level()) ob_end_clean();
+
+		// call the system error handler
+		$handler = sly_Core::getErrorHandler();
+
+		if (!($handler instanceof sly_ErrorHandler)) {
+			throw new LogicException('System error handlers must implement sly_ErrorHandler, '.get_class($handler).' given.');
 		}
 
-		sly_Service_Factory::getAssetService()->validateCache();
-	}
-
-	/**
-	 * Get the page param
-	 *
-	 * Reads the page param from the $_REQUEST array and returns it.
-	 *
-	 * @param  string $default  default value if param is not present
-	 * @return string           the page param
-	 */
-	public function getPage($default = '') {
-		return strtolower(sly_request(self::PAGEPARAM, 'string', $default));
-	}
-
-	/**
-	 * Get the action param
-	 *
-	 * Reads the action param from the $_REQUEST array and returns it.
-	 *
-	 * @param  string $default  default value if param is not present
-	 * @return string           the action param
-	 */
-	public function getAction($default = '') {
-		return strtolower(sly_request(self::ACTIONPARAM, 'string', $default));
-	}
-
-	/**
-	 * Get the currently active page
-	 *
-	 * The page determines the controller that will be used for dispatching. It
-	 * will be put into $_REQUEST (so that third party code can access the
-	 * correct value).
-	 *
-	 * When setup is true, requests to the setup controller will be redirected to
-	 * the profile page (always accessible). Otherwise, this method will also
-	 * check whether the current user has access to the found controller. If a
-	 * forbidden controller is requested, the profile page is used.
-	 *
-	 * @return string  the currently active page
-	 */
-	protected function findPage() {
-		$config = sly_Core::config();
-		$page   = $this->getPage();
-
-		// Erst normale Startseite, dann User-Startseite, dann System-Startseite und
-		// zuletzt auf die Profilseite zurückfallen.
-
-		if (strlen($page) === 0 || !$this->isControllerAvailable($page)) {
-			$user = sly_Util_User::getCurrentUser();
-			$page = $user ? $user->getStartpage() : null;
-
-			if ($page === null || !$this->isControllerAvailable($page)) {
-				$page = strtolower($config->get('START_PAGE'));
-
-				if (!$this->isControllerAvailable($page)) {
-					$page = 'profile';
-				}
-			}
-		}
-
-		$_REQUEST[self::PAGEPARAM] = $page;
-
-		return $page;
-	}
-
-	public function isControllerAvailable($page) {
-		return class_exists($this->getControllerClass($page));
-	}
-
-	/**
-	 * return classname for &page=whatever
-	 *
-	 * It will return sly_Controller_System for &page=system
-	 * and sly_Controller_System_Languages for &page=system_languages
-	 *
-	 * @param  string $page
-	 * @return string
-	 */
-	public function getControllerClass($page) {
-		$className = 'sly_Controller';
-		$parts     = explode('_', $page);
-
-		foreach ($parts as $part) {
-			$className .= '_'.ucfirst($part);
-		}
-
-		return $className;
+		$handler->handleException($e); // dies away (does not use sly_Response)
 	}
 }
