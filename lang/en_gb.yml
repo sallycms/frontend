@@ -1,2 +1,3 @@
 no_articletype_set: "This article's type has not yet been set."
 no_startarticle: 'No homepage given. Please select one in the <a href="{0}">backend</a>.'
+template_not_found: 'Template {0} could not be found!'

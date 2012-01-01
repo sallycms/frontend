@@ -12,13 +12,15 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	protected $article;
 
 	public function indexAction() {
-		// find current article
-		$article = sly_Util_Article::findById(sly_Core::getCurrentArticleId(), sly_Core::getCurrentClang());
-
-		// last chance to tamper with the page building process before the actual article processing starts
-		$article = sly_Core::dispatcher()->filter('SLY_PRE_PROCESS_ARTICLE', $article);
+		$article = $this->findArticle();
 
 		if ($article) {
+			// last chance to tamper with the page building process before the actual article processing starts
+			$article = sly_Core::dispatcher()->filter('SLY_PRE_PROCESS_ARTICLE', $article);
+
+			// set the article data in sly_Core
+			sly_Core::setCurrentArticleId($article->getId());
+
 			// now that we know the frontend language, init the global i18n object
 			$i18n = sly_Core::getI18N();
 			$i18n->setLocale(sly_Util_Language::getLocale());
@@ -31,6 +33,40 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		else {
 			print t('no_startarticle', 'backend/index.php');
 		}
+	}
+
+	protected function findArticle() {
+		$articleID = sly_request('article_id', 'int');
+		$clangID   = sly_request('clang', 'int');
+
+		if ($clangID <= 0 || !sly_Util_Language::exists($clangID)) {
+			$clangID = sly_Core::getDefaultClangId();
+		}
+
+		// the following article API calls require to know a language
+		sly_Core::setCurrentClang($clangID);
+
+		if ($articleID <= 0 || !sly_Util_Article::exists($articleID)) {
+			$articleID = sly_Core::getSiteStartArticleId();
+		}
+
+		// ask the system if anyone can make a better guess
+		$retval = sly_Core::dispatcher()->filter('SLY_RESOLVE_ARTICLE', array(
+			'article' => $articleID,
+			'clang'   => $clangID
+		));
+
+		if (!is_array($retval) || !isset($retval['article']) || !isset($retval['clang'])) {
+			throw new sly_Exception('Invalid result got from executing SLY_RESOLVE_ARTICLE.');
+		}
+
+		extract($retval);
+
+		if (!sly_Util_Article::exists($article)) {
+			$article = sly_Core::getNotFoundArticleId();
+		}
+
+		return sly_Util_Article::findById($article, $clang);
 	}
 
 	public function teardown() {
