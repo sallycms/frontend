@@ -23,8 +23,13 @@ class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
 			exit('Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.');
 		}
 
-		// init i18n (TODO: This makes no sense... but addOns require the i18n object to be present)
-		sly_Core::setI18N(new sly_I18N(sly_Core::getDefaultLocale(), SLY_DEVELOPFOLDER.'/lang'));
+		// Load the base i18n database. This database contains translations for
+		// the *backend* locales, but since it only contains error messages that
+		// are used before any frontend language detection is done (-> article
+		// controller), this is OK.
+
+		$i18n = new sly_I18N(sly_Core::getDefaultLocale(), SLY_SALLYFOLDER.'/frontend/lang', false);
+		sly_Core::setI18N($i18n);
 
 		parent::initialize();
 	}

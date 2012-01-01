@@ -19,6 +19,12 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		$article = sly_Core::dispatcher()->filter('SLY_PRE_PROCESS_ARTICLE', $article);
 
 		if ($article) {
+			// now that we know the frontend language, init the global i18n object
+			$i18n = sly_Core::getI18N();
+			$i18n->setLocale(sly_Util_Language::getLocale());
+			$i18n->appendFile(SLY_DEVELOPFOLDER.'/lang');
+
+			// finally run the template and generate the output
 			print $article->getArticleTemplate();
 			$this->article = $article;
 		}
