@@ -10,14 +10,15 @@
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
-		$file = sly_get('sly_asset', 'string');
-
+		$file     = sly_get('sly_asset', 'string');
 		$response = new sly_Response();
 
 		if (mb_strlen($file) === 0) {
 			$response->setStatusCode(400);
-		}else {
+		}
+		else {
 			$service = sly_Service_Factory::getAssetService();
+
 			try {
 				$errorLevel   = error_reporting();
 				$enc          = $this->getPreferredClientEncoding();
@@ -26,7 +27,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 
 				$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
 
-				if($content === false) {
+				if ($content === false) {
 					$response->setStatusCode(404);
 					return $response;
 				}
@@ -47,17 +48,21 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				$response->setHeader('Last-Modified', date('r', time()));
 				$lastError = error_get_last();
 				error_reporting($errorLevel);
-				if(!empty($lastError)) throw new sly_Exception($lastError['message'].' In File: '.$lastError['file'].' on Line: '.$lastError['line']);
-			}catch(Exception $e) {
-				if($e instanceof sly_Authorisation_Exception) {
+				if (!empty($lastError)) throw new sly_Exception($lastError['message'].' In File: '.$lastError['file'].' on Line: '.$lastError['line']);
+			}
+			catch (Exception $e) {
+				if ($e instanceof sly_Authorisation_Exception) {
 					$response->setStatusCode(403);
-				}else {
+				}
+				else {
 					$response->setStatusCode(500);
 				}
+
 				$response->setContent($e->getMessage());
 				$response->setContentType('text/html', 'UTF-8');
 			}
 		}
+
 		// process the file
 		return $response;
 	}

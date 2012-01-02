@@ -106,13 +106,6 @@ class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
 
 		// call the system error handler
 		$handler = sly_Core::getErrorHandler();
-
-		//look at sly_Core::setErrorHander and think about it
-		/*if (!($handler instanceof sly_ErrorHandler)) {
-			throw new LogicException('System error handlers must implement sly_ErrorHandler, '.get_class($handler).' given.');
-		}*/
-
-		//TODO: handleException is not part of the interface, so this is not good
 		$handler->handleException($e); // dies away (does not use sly_Response)
 	}
 }

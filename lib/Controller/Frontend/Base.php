@@ -8,12 +8,12 @@
  * http://www.opensource.org/licenses/mit-license.php
  */
 
-abstract class sly_Controller_Frontend_Base extends sly_Controller_Base {
+abstract class sly_Controller_Frontend_Base extends sly_Controller_Base implements sly_Controller_Interface {
 	protected function getViewFolder() {
 		return SLY_DEVELOPFOLDER.'/views/';
 	}
 
-	public function checkPermission() {
+	public function checkPermission($action) {
 		return true;
 	}
 }
