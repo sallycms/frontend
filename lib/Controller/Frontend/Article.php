@@ -15,9 +15,6 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		$article = $this->findArticle();
 
 		if ($article) {
-			// last chance to tamper with the page building process before the actual article processing starts
-			$article = sly_Core::dispatcher()->filter('SLY_PRE_PROCESS_ARTICLE', $article);
-
 			// set the article data in sly_Core
 			sly_Core::setCurrentArticleId($article->getId());
 
@@ -25,6 +22,9 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			$i18n = sly_Core::getI18N();
 			$i18n->setLocale(strtolower(sly_Util_Language::getLocale()));
 			$i18n->appendFile(SLY_DEVELOPFOLDER.'/lang');
+
+			// notify listeners about the article to be rendered
+			sly_Core::dispatcher()->notify('SLY_CURRENT_ARTICLE', $article);
 
 			// finally run the template and generate the output
 			print $article->getArticleTemplate();
