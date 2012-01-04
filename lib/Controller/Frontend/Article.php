@@ -9,14 +9,22 @@
  */
 
 class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
-	protected $article;
+	private $notFound = false;
+
+	public function __construct() {
+		sly_Core::dispatcher()->register('SLY_RESOLVE_ARTICLE', array($this, 'oldSchoolResolver'));
+	}
 
 	public function indexAction() {
 		$article = $this->findArticle();
 
+		// preselect the HTTP response code
+		$this->prepareResponse($article);
+
 		if ($article) {
 			// set the article data in sly_Core
 			sly_Core::setCurrentArticleId($article->getId());
+			sly_Core::setCurrentClang($article->getClang());
 
 			// now that we know the frontend language, init the global i18n object
 			$i18n = sly_Core::getI18N();
@@ -27,68 +35,71 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			sly_Core::dispatcher()->notify('SLY_CURRENT_ARTICLE', $article);
 
 			// finally run the template and generate the output
-			print $article->getArticleTemplate();
-			$this->article = $article;
+			$output = $article->getArticleTemplate();
+
+			// article postprocessing is a special task, so here's a special event
+			$output = sly_Core::dispatcher()->filter('SLY_ARTICLE_OUTPUT', $output, compact('article'));
+
+			// and print it
+			print $output;
 		}
 		else {
+			// If we got here, not even the 404 article could be found. Ouch.
 			print t('no_startarticle', 'backend/index.php');
 		}
 	}
 
-	protected function findArticle() {
-		$articleID = sly_request('article_id', 'int');
-		$clangID   = sly_request('clang', 'int');
+	protected function prepareResponse() {
+		$lastMod  = sly_Core::config()->get('USE_LAST_MODIFIED');
+		$response = sly_Core::getResponse();
 
-		if ($clangID <= 0 || !sly_Util_Language::exists($clangID)) {
+		// handle 404
+		if ($this->notFound) {
+			$response->setStatusCode(404);
+		}
+
+		// optionally send Last-Modified header
+		if ($lastMod === true || $lastMod === 'frontend') {
+			$response->setLastModified($article->getUpdateDate());
+		}
+	}
+
+	protected function findArticle() {
+		$article = sly_Core::dispatcher()->filter('SLY_RESOLVE_ARTICLE', null);
+
+		// Did all listeners behave?
+		if ($article !== null && !($article instanceof sly_Model_Article)) {
+			throw new LogicException('Listeners to SLY_RESOLVE_ARTICLE are required to return a sly_Model_Article instance.');
+		}
+
+		// If no article could be found, display the not-found article.
+		if ($article === null) {
+			$this->notFound = true;
+			$article = sly_Util_Article::findById(sly_Core::getNotFoundArticleId(), sly_Core::getDefaultClangId());
+		}
+
+		return $article;
+	}
+
+	public function oldSchoolResolver(array $params) {
+		if ($params['subject']) return $params['subject'];
+
+		$articleID = sly_request('article_id', 'int', sly_Core::getSiteStartArticleId());
+		$clangID   = sly_request('clang',      'int', sly_Core::getDefaultClangId());
+
+		// A wrong language counts as not found!
+		// But since we're nice people, we won't just give up and try to use the
+		// site's default language, possibly at least showing the requested article.
+
+		if (!sly_Util_Language::exists($clangID)) {
+			$this->notFound = true;
 			$clangID = sly_Core::getDefaultClangId();
 		}
 
-		// the following article API calls require to know a language
+		// the following API calls require to know a language
 		sly_Core::setCurrentClang($clangID);
 
-		if ($articleID <= 0 || !sly_Util_Article::exists($articleID)) {
-			$articleID = sly_Core::getSiteStartArticleId();
-		}
-
-		// ask the system if anyone can make a better guess
-		$retval = sly_Core::dispatcher()->filter('SLY_RESOLVE_ARTICLE', array(
-			'article' => $articleID,
-			'clang'   => $clangID
-		));
-
-		if (!is_array($retval) || !isset($retval['article']) || !isset($retval['clang'])) {
-			throw new sly_Exception('Invalid result got from executing SLY_RESOLVE_ARTICLE.');
-		}
-
-		extract($retval);
-
-		if (!sly_Util_Article::exists($article)) {
-			$article = sly_Core::getNotFoundArticleId();
-		}
-
-		return sly_Util_Article::findById($article, $clang);
-	}
-
-	public function teardown() {
-		// check if this is a 404 article and set HTTP status accordingly
-		// (This works only for projects not using a realurl implementation.)
-
-		if ($this->article) {
-			$requestedID = sly_request('article_id', 'int');
-			$displayedID = $this->article->getId();
-			$config      = sly_Core::config();
-			$notFoundID  = sly_Core::getNotFoundArticleId();
-			$startID     = sly_Core::getSiteStartArticleId();
-			$lastMod     = $config->get('USE_LAST_MODIFIED');
-			$response    = sly_Core::getResponse();
-
-			if ($requestedID !== $notFoundID && $displayedID === $notFoundID && $displayedID !== $startID) {
-				$response->setStatusCode(404);
-			}
-
-			if ($lastMod === true || $lastMod === 'frontend') {
-				$response->setLastModified($article->getUpdateDate());
-			}
-		}
+		// find the requested article (or give up by returning null)
+		return sly_Util_Article::findById($articleID, $clangID);
 	}
 }
