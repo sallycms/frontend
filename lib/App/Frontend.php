@@ -92,7 +92,7 @@ class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
 		return 'sly_Controller_Frontend';
 	}
 
-	public function getCurrentController() {
+	public function getCurrentControllerName() {
 		return $this->controller;
 	}
 
