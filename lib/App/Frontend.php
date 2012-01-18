@@ -48,14 +48,21 @@ class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
 			'/sally/:controller'
 		));
 
+		// let addOns extend our router rule set
+		$router = sly_Core::dispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
+
+		if (!($router instanceof sly_Router_Interface)) {
+			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
+		}
+
 		// if no special controller was found, we use the article controller
 		if (!$router->hasMatch()) {
 			$controller = sly_request(self::CONTROLLER_PARAM, 'string', 'article');
 			$action     = sly_request(self::ACTION_PARAM, 'string', 'index');
 		}
 		else {
-			$controller = $router->get('controller');
-			$action     = $router->get('action', 'index');
+			$controller = $router->getController();
+			$action     = $router->getAction();
 		}
 
 		// let the core know where we are
