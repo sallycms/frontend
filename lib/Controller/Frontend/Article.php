@@ -9,6 +9,8 @@
  */
 
 class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
+	const PARAM_MISSING = -1000;
+
 	private $notFound = false;
 
 	public function __construct() {
@@ -84,20 +86,26 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	public function oldSchoolResolver(array $params) {
 		if ($params['subject']) return $params['subject'];
 
-		$articleID = sly_request('article_id', 'int', sly_Core::getSiteStartArticleId());
-		$clangID   = sly_request('clang',      'int', sly_Core::getDefaultClangId());
+		// we need to know if the params are missing
+		$articleID = sly_request('article_id', 'int', self::PARAM_MISSING);
+		$clangID   = sly_request('clang',      'int', self::PARAM_MISSING);
+		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
+
+		// it might be the startpage http://example.com/ which has no params
+		if($articleID == self::PARAM_MISSING && $isStart) {
+			$articleID = sly_Core::getSiteStartArticleId();
+		}
 
 		// A wrong language counts as not found!
 		// But since we're nice people, we won't just give up and try to use the
 		// site's default language, possibly at least showing the requested article.
 
 		if (!sly_Util_Language::exists($clangID)) {
-			$this->notFound = true;
+			if(!$isStart) {
+				$this->notFound = true;
+			}
 			$clangID = sly_Core::getDefaultClangId();
 		}
-
-		// the following API calls require to know a language
-		sly_Core::setCurrentClang($clangID);
 
 		// find the requested article (or give up by returning null)
 		return sly_Util_Article::findById($articleID, $clangID);
