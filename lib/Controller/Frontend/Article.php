@@ -9,8 +9,6 @@
  */
 
 class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
-	const PARAM_MISSING = -1000;
-
 	private $notFound = false;
 
 	public function __construct() {
@@ -87,12 +85,12 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		if ($params['subject']) return $params['subject'];
 
 		// we need to know if the params are missing
-		$articleID = sly_request('article_id', 'int', self::PARAM_MISSING);
-		$clangID   = sly_request('clang',      'int', self::PARAM_MISSING);
+		$articleID = sly_request('article_id', 'int', null);
+		$clangID   = sly_request('clang',      'int', null);
 		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
 
 		// it might be the startpage http://example.com/ which has no params
-		if($articleID == self::PARAM_MISSING && $isStart) {
+		if ($articleID === null && $isStart) {
 			$articleID = sly_Core::getSiteStartArticleId();
 		}
 
@@ -101,7 +99,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		// site's default language, possibly at least showing the requested article.
 
 		if (!sly_Util_Language::exists($clangID)) {
-			if(!$isStart) {
+			if (!$isStart) {
 				$this->notFound = true;
 			}
 			$clangID = sly_Core::getDefaultClangId();
