@@ -20,10 +20,10 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	public function indexAction() {
 		$article = $this->findArticle();
 
-		// preselect the HTTP response code
-		$this->prepareResponse($article);
-
 		if ($article) {
+			// preselect the HTTP response code
+			$this->prepareResponse($article);
+
 			// set the article data in sly_Core
 			sly_Core::setCurrentArticleId($article->getId());
 			sly_Core::setCurrentClang($article->getClang());
