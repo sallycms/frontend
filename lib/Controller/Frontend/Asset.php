@@ -12,6 +12,9 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
 		$file     = sly_get('sly_asset', 'string');
 		$response = new sly_Response();
+		$timezone = sly_Core::config()->get('SETUP') ? date_default_timezone_get() : sly_Core::getTimezone();
+
+		date_default_timezone_set($timezone);
 
 		if (mb_strlen($file) === 0) {
 			$response->setStatusCode(400);
