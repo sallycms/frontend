@@ -8,7 +8,7 @@
  * http://www.opensource.org/licenses/mit-license.php
  */
 
-class sly_App_Frontend extends sly_App_Base implements sly_App_Interface {
+class sly_App_Frontend extends sly_App_Base {
 	const CONTROLLER_PARAM = 'slycontroller';  ///< string  the request param that contains the page
 	const ACTION_PARAM     = 'slyaction';      ///< string  the request param that contains the action
 
