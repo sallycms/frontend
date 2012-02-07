@@ -65,6 +65,20 @@ class sly_App_Frontend extends sly_App_Base {
 			$action     = $router->getAction();
 		}
 
+		// test the controller
+		$className = $this->getControllerClass($controller);
+
+		try {
+			$this->getController($className);
+		}
+		catch (sly_Controller_Exception $e) {
+			if ($e->getCode() === 404) {
+				$response = new sly_Response('', 404);
+				$response->send();
+				return;
+			}
+		}
+
 		// let the core know where we are
 		$this->controller = $controller;
 		$this->action     = $action;
