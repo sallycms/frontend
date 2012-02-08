@@ -12,6 +12,8 @@ class sly_App_Frontend extends sly_App_Base {
 	const CONTROLLER_PARAM = 'slycontroller';  ///< string  the request param that contains the page
 	const ACTION_PARAM     = 'slyaction';      ///< string  the request param that contains the action
 
+	private $router;
+
 	public function initialize() {
 		$config  = sly_Core::config();
 		$isSetup = $config->get('SETUP');
@@ -43,26 +45,28 @@ class sly_App_Frontend extends sly_App_Base {
 		$response = sly_Core::getResponse();
 
 		// find controller
-		$router = new sly_Router_Base(array(
-			'/sally/:controller/:action',
-			'/sally/:controller'
+		$this->router = new sly_Router_Base(array(
+			'/sally/:controller/:action' => array(),
+			'/sally/:controller'         => array('action' => 'index')
 		));
 
 		// let addOns extend our router rule set
-		$router = sly_Core::dispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
+		$router = sly_Core::dispatcher()->filter('SLY_FRONTEND_ROUTER', $this->router, array('app' => $this));
 
 		if (!($router instanceof sly_Router_Interface)) {
 			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
 		}
 
+		$this->router = $router;
+
 		// if no special controller was found, we use the article controller
-		if (!$router->hasMatch()) {
+		if (!$this->router->hasMatch()) {
 			$controller = sly_request(self::CONTROLLER_PARAM, 'string', 'article');
 			$action     = sly_request(self::ACTION_PARAM, 'string', 'index');
 		}
 		else {
-			$controller = $router->getController();
-			$action     = $router->getAction();
+			$controller = $this->router->getController();
+			$action     = $this->router->getAction();
 		}
 
 		// test the controller
@@ -119,6 +123,10 @@ class sly_App_Frontend extends sly_App_Base {
 
 	public function getCurrentAction() {
 		return $this->action;
+	}
+
+	public function getRouter() {
+		return $this->router;
 	}
 
 	protected function handleControllerError(Exception $e, $controller, $action) {
