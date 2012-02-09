@@ -1,3 +1,4 @@
 no_articletype_set: Der Typ dieses Artikels wurde nicht gesetzt.
 no_startarticle: 'Kein Startartikel selektiert. Bitte setze ihn im <a href="{0}">Backend</a>.'
 template_not_found: 'Das Template {0} wurde nicht gefunden!'
+develop_file_not_found: 'Die Development-Ressource {0} wurde nicht gefunden!'
