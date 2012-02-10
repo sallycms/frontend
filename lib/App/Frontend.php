@@ -45,10 +45,7 @@ class sly_App_Frontend extends sly_App_Base {
 		$response = sly_Core::getResponse();
 
 		// find controller
-		$this->router = new sly_Router_Base(array(
-			'/sally/:controller/:action' => array(),
-			'/sally/:controller'         => array('action' => 'index')
-		));
+		$this->router = new sly_Router_Base();
 
 		// let addOns extend our router rule set
 		$router = sly_Core::dispatcher()->filter('SLY_FRONTEND_ROUTER', $this->router, array('app' => $this));
