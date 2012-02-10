@@ -2,3 +2,7 @@ no_articletype_set: Der Typ dieses Artikels wurde nicht gesetzt.
 no_startarticle: 'Kein Startartikel selektiert. Bitte setze ihn im <a href="{0}">Backend</a>.'
 template_not_found: 'Das Template {0} wurde nicht gefunden!'
 develop_file_not_found: 'Die Development-Ressource {0} wurde nicht gefunden!'
+multiple_condition_handlers_found: Es wurden mehrere mögliche Condition-Handler gefunden. Verwende den erstbesten.
+name_contains_invalid_characters: Der interne Name enthält ungültige Zeichen.
+not_all_requirements_met: Es sind nicht alle Abhängigkeiten erfüllt.
+no_condition_handler_found: Es wurde kein Condition-Handler gefunden.
