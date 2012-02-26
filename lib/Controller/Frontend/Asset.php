@@ -27,7 +27,6 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				$enc          = $this->getPreferredClientEncoding();
 				$type         = sly_Util_Mime::getType($file);
 				$content      = $service->process($file, $enc);
-
 				$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
 
 				if ($content === false) {
@@ -49,11 +48,19 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				$response->setContentType($type, 'UTF-8');
 				$response->setHeader('Cache-Control', $cacheControl);
 				$response->setHeader('Last-Modified', date('r', time()));
+
 				$lastError = error_get_last();
 				error_reporting($errorLevel);
-				if (!empty($lastError)) throw new sly_Exception($lastError['message'].' In File: '.$lastError['file'].' on Line: '.$lastError['line']);
+
+				if (!empty($lastError)) {
+					throw new sly_Exception($lastError['message'].' in '.$lastError['file'].' on line '.$lastError['line'].'.');
+				}
 			}
 			catch (Exception $e) {
+				// use a fresh response to avoid having special caching headers
+				// that would make the client cache the error message
+				$response = new sly_Response();
+
 				if ($e instanceof sly_Authorisation_Exception) {
 					$response->setStatusCode(403);
 				}
@@ -61,8 +68,15 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 					$response->setStatusCode(500);
 				}
 
-				$response->setContent($e->getMessage());
-				$response->setContentType('text/html', 'UTF-8');
+				if (sly_Core::isDeveloperMode()) {
+					$response->setContent($e->getMessage());
+				}
+				else {
+					$response->setContent('Error while processing asset.');
+				}
+
+				$response->setExpires(time()-24*3600);
+				$response->setContentType('text/plain', 'UTF-8');
 			}
 		}
 
