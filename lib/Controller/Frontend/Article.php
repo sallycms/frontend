@@ -81,6 +81,10 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		return $article;
 	}
 
+	public function isNotFound() {
+		return $this->notFound;
+	}
+
 	public function oldSchoolResolver(array $params) {
 		if ($params['subject']) return $params['subject'];
 

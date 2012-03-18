@@ -12,8 +12,14 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
 		$file     = sly_get('sly_asset', 'string');
 		$response = new sly_Response();
-		$timezone = sly_Core::config()->get('SETUP') ? date_default_timezone_get() : sly_Core::getTimezone();
+		$timezone = sly_Core::config()->get('SETUP') ? @date_default_timezone_get() : sly_Core::getTimezone();
 
+		// fix badly configured servers where the get function doesn't even return a guessed default timezone
+		if (empty($timezone)) {
+			$timezone = sly_Core::getTimezone();
+		}
+
+		// set the determined timezone
 		date_default_timezone_set($timezone);
 
 		if (mb_strlen($file) === 0) {
@@ -22,8 +28,11 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		else {
 			$service = sly_Service_Factory::getAssetService();
 
+			// "clear" any errors that might came up when detecting the timezone
+			if (error_get_last()) @trigger_error('', E_USER_NOTICE);
+
 			try {
-				$errorLevel   = error_reporting();
+				$errorLevel   = error_reporting(0);
 				$enc          = $this->getPreferredClientEncoding();
 				$type         = sly_Util_Mime::getType($file);
 				$content      = $service->process($file, $enc);
@@ -52,7 +61,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				$lastError = error_get_last();
 				error_reporting($errorLevel);
 
-				if (!empty($lastError)) {
+				if (!empty($lastError) && mb_strlen($lastError['message']) > 0) {
 					throw new sly_Exception($lastError['message'].' in '.$lastError['file'].' on line '.$lastError['line'].'.');
 				}
 			}
@@ -91,7 +100,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		static $enc;
 
 		if (!isset($enc)) {
-			$enc = false;
+			$enc = 'plain';
 			$e   = trim(sly_get('encoding', 'string'), '/');
 
 			if (in_array($e, array('plain', 'gzip', 'deflate'))) {
