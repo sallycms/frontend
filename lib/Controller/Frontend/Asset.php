@@ -43,15 +43,6 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 					return $response;
 				}
 
-				switch ($enc) {
-					case 'plain':
-						break;
-					case 'deflate':
-					case 'gzip':
-						$response->setHeader('Content-Encoding', $enc);
-						break;
-				}
-
 				$response->setStatusCode(200);
 				$response->setContent($content);
 				$response->setContentType($type, 'UTF-8');
