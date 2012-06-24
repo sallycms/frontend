@@ -98,11 +98,12 @@ class sly_Util_Navigation {
 	 * @return string
 	 */
 	protected function walkCategories($categories, $all, $maxDepth, $currentLevel = 1) {
-		$categories = $this->filterCategories($categories);
+		// skip possibly expensive category filtering if possible
+		if ($currentLevel > $maxDepth) return '';
 
-		if (empty($categories) || ($currentLevel > $maxDepth)) {
-			return '';
-		}
+		// custom filtering in subclasses
+		$categories = $this->filterCategories($categories);
+		if (empty($categories)) return '';
 
 		$lastnum      = count($categories) -1;
 		$resultString = '';
