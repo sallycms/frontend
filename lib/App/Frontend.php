@@ -37,9 +37,6 @@ class sly_App_Frontend extends sly_App_Base {
 	}
 
 	public function run() {
-		$config  = sly_Core::config();
-		$isSetup = $config->get('SETUP');
-
 		// get the most probably already prepared response object
 		// (addOns had a shot at modifying it)
 		$response = sly_Core::getResponse();
