@@ -2,7 +2,8 @@ no_articletype_set: "This article's type has not yet been set."
 no_startarticle: 'No homepage given. Please select one in the <a href="{0}">backend</a>.'
 template_not_found: 'Template {0} could not be found!'
 develop_file_not_found: 'The development resource {0} could not be found!'
-multiple_condition_handlers_found: Multiple valid condition handlers have been found. Going with the first good one.
+condition_handlers_result_ambiguous: 'More than one resource left over after applying the condition handlers for "{0}": {1}'
+condition_handlers_empty_result: 'By applying all condititions handlers for "{0}" all possible resources have been removed.'
 name_contains_invalid_characters: The internal name contains invalid characters!
 not_all_requirements_met: Not all requirements have been met!
 no_condition_handler_found: No valid condition handler could be found!
