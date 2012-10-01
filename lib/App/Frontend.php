@@ -15,11 +15,8 @@ class sly_App_Frontend extends sly_App_Base {
 	private $router;
 
 	public function initialize() {
-		$config  = sly_Core::config();
-		$isSetup = $config->get('SETUP');
-
 		// Setup?
-		if (!isset($_GET['sly_asset']) && $isSetup) {
+		if (!isset($_GET['sly_asset']) && sly_Core::isSetup()) {
 			$target = sly_Util_HTTP::getBaseUrl(true).'/backend/';
 			header('Location: '.$target);
 			exit('Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.');
