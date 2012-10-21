@@ -89,8 +89,9 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		if ($params['subject']) return $params['subject'];
 
 		// we need to know if the params are missing
-		$articleID = sly_request('article_id', 'int', null);
-		$clangID   = sly_request('clang',      'int', null);
+		$request   = $this->getRequest();
+		$articleID = $request->request('article_id', 'int');
+		$clangID   = $request->request('clang', 'int');
 		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
 
 		// it might be the startpage http://example.com/ which has no params

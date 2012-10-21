@@ -52,8 +52,9 @@ class sly_App_Frontend extends sly_App_Base {
 
 		// if no special controller was found, we use the article controller
 		if (!$this->router->hasMatch()) {
-			$controller = sly_request(self::CONTROLLER_PARAM, 'string', 'article');
-			$action     = sly_request(self::ACTION_PARAM, 'string', 'index');
+			$request    = sly_Core::getRequest();
+			$controller = $request->request(self::CONTROLLER_PARAM, 'string', 'article');
+			$action     = $request->request(self::ACTION_PARAM, 'string', 'index');
 		}
 		else {
 			$controller = $this->router->getController();

@@ -10,7 +10,7 @@
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
-		$file     = sly_get('sly_asset', 'string');
+		$file     = $this->getRequest()->get('sly_asset', 'string', '');
 		$timezone = sly_Core::isSetup() ? @date_default_timezone_get() : sly_Core::getTimezone();
 
 		// fix badly configured servers where the get function doesn't even return a guessed default timezone
