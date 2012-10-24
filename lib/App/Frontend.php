@@ -15,11 +15,15 @@ class sly_App_Frontend extends sly_App_Base {
 	private $router;
 
 	public function initialize() {
+		$container = $this->getContainer();
+		$request   = $container->getRequest();
+
 		// Setup?
-		if (!isset($_GET['sly_asset']) && sly_Core::isSetup()) {
-			$target = sly_Util_HTTP::getBaseUrl(true).'/backend/';
-			header('Location: '.$target);
-			exit('Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.');
+		if (!$request->get->has('sly_asset') && sly_Core::isSetup()) {
+			$target = $request->getBaseUrl(true).'/backend/';
+			$text   = 'Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.';
+
+			sly_Util_HTTP::tempRedirect($target, array(), $text);
 		}
 
 		// Load the base i18n database. This database contains translations for
@@ -28,7 +32,7 @@ class sly_App_Frontend extends sly_App_Base {
 		// controller), this is OK.
 
 		$i18n = new sly_I18N(sly_Core::getDefaultLocale(), SLY_SALLYFOLDER.'/frontend/lang', false);
-		sly_Core::setI18N($i18n);
+		$container->setI18N($i18n);
 
 		parent::initialize();
 	}
@@ -36,13 +40,14 @@ class sly_App_Frontend extends sly_App_Base {
 	public function run() {
 		// get the most probably already prepared response object
 		// (addOns had a shot at modifying it)
-		$response = sly_Core::getResponse();
+		$container = $this->getContainer();
+		$response  = $container->getResponse();
 
 		// find controller
 		$this->router = new sly_Router_Base();
 
 		// let addOns extend our router rule set
-		$router = sly_Core::dispatcher()->filter('SLY_FRONTEND_ROUTER', $this->router, array('app' => $this));
+		$router = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $this->router, array('app' => $this));
 
 		if (!($router instanceof sly_Router_Interface)) {
 			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
@@ -52,7 +57,7 @@ class sly_App_Frontend extends sly_App_Base {
 
 		// if no special controller was found, we use the article controller
 		if (!$this->router->hasMatch()) {
-			$request    = sly_Core::getRequest();
+			$request    = $container->getRequest();
 			$controller = $request->request(self::CONTROLLER_PARAM, 'string', 'article');
 			$action     = $request->request(self::ACTION_PARAM, 'string', 'index');
 		}
@@ -84,7 +89,7 @@ class sly_App_Frontend extends sly_App_Base {
 
 		// do it, baby
 		$content  = $this->dispatch($controller, $action);
-		$response = sly_Core::getResponse(); // re-fetch the current global response
+		$response = $container->getResponse(); // re-fetch the current global response
 
 		// if we got a string, wrap it in the layout and then in the response object
 		if (is_string($content)) {
@@ -126,7 +131,7 @@ class sly_App_Frontend extends sly_App_Base {
 		while (ob_get_level()) ob_end_clean();
 
 		// call the system error handler
-		$handler = sly_Core::getErrorHandler();
+		$handler = $this->getContainer()->getErrorHandler();
 		$handler->handleException($e); // dies away (does not use sly_Response)
 	}
 }
