@@ -37,6 +37,9 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			$plainFile    = $service->process($file, $encoding);
 			$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
 
+			$lastError = error_get_last();
+			error_reporting($errorLevel);
+
 			if ($plainFile === null) {
 				return new sly_Response('', 404);
 			}
@@ -44,13 +47,28 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				return $plainFile;
 			}
 
+			// if the file is protected, run the project specific checkpermission.php
+			if ($service->isProtected($file)) {
+				$allowAccess = false;
+				$checkScript = SLY_DEVELOPFOLDER.'/checkpermission.php';
+
+				if (file_exists($checkScript)) {
+					include $checkScript;
+				}
+
+				if (!$allowAccess) {
+					throw new sly_Authorisation_Exception('access forbidden');
+				}
+
+				if (strpos($cacheControl, 'private') === false) {
+					$cacheControl = $cacheControl ? "$cacheControl, private" : 'private';
+				}
+			}
+
 			$response = new sly_Response_Stream($plainFile, 200);
 			$response->setContentType($type, 'UTF-8');
 			$response->setHeader('Cache-Control', $cacheControl);
 			$response->setHeader('Last-Modified', date('r', time()));
-
-			$lastError = error_get_last();
-			error_reporting($errorLevel);
 
 			if (!empty($lastError) && mb_strlen($lastError['message']) > 0) {
 				throw new sly_Exception($lastError['message'].' in '.$lastError['file'].' on line '.$lastError['line'].'.');
@@ -61,12 +79,13 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 
 			if ($e instanceof sly_Authorisation_Exception) {
 				$response->setStatusCode(403);
+				$response->setHeader('Cache-Control', 'private');
 			}
 			else {
 				$response->setStatusCode(500);
 			}
 
-			if (sly_Core::isDeveloperMode()) {
+			if (sly_Core::isDeveloperMode() || $e instanceof sly_Authorisation_Exception) {
 				$response->setContent($e->getMessage());
 			}
 			else {
