@@ -10,7 +10,7 @@
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	public function indexAction() {
-		$file     = sly_get('sly_asset', 'string');
+		$file = $this->getRequest()->get('sly_asset', 'string', '');
 
 		if (mb_strlen($file) === 0) {
 			return new sly_Response('', 400);
