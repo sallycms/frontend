@@ -12,8 +12,6 @@ class sly_App_Frontend extends sly_App_Base {
 	const CONTROLLER_PARAM = 'slycontroller';  ///< string  the request param that contains the page
 	const ACTION_PARAM     = 'slyaction';      ///< string  the request param that contains the action
 
-	private $router;
-
 	public function isBackend() {
 		return false;
 	}
@@ -52,10 +50,10 @@ class sly_App_Frontend extends sly_App_Base {
 		$response  = $container->getResponse();
 
 		// find controller
-		$this->router = new sly_Router_Base();
+		$router = new sly_Router_Base();
 
 		// let addOns extend our router rule set
-		$router  = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $this->router, array('app' => $this));
+		$router  = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
 		$request = $container->getRequest(); // fetch after the event to allow to tamper with it by addOns
 
 		if (!($router instanceof sly_Router_Interface)) {
