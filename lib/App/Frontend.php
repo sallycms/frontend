@@ -44,66 +44,22 @@ class sly_App_Frontend extends sly_App_Base {
 	}
 
 	public function run() {
-		// get the most probably already prepared response object
-		// (addOns had a shot at modifying it)
-		$container = $this->getContainer();
-		$response  = $container->getResponse();
-
-		// find controller
-		$router = new sly_Router_Base();
-
-		// let addOns extend our router rule set
-		$router  = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
-		$request = $container->getRequest(); // fetch after the event to allow to tamper with it by addOns
-
-		if (!($router instanceof sly_Router_Interface)) {
-			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
-		}
-
-		// use the router to prepare the request and setup proper query string values
-		$router->match($request);
-
-		$controller = $request->request(self::CONTROLLER_PARAM, 'string', 'article');
-		$action     = $request->request(self::ACTION_PARAM,     'string', 'index');
-
-		// test the controller
-		$className = $this->getControllerClass($controller);
-
 		try {
-			$this->getController($className);
+			// resolve URL and find controller
+			$this->performRouting();
+
+			// notify the addOns
+			$this->notifySystemOfController();
+
+			// do it, baby
+			$dispatcher = $this->getDispatcher();
+			$response   = $dispatcher->dispatch($this->controller, $this->action);
 		}
 		catch (sly_Controller_Exception $e) {
-			if ($e->getCode() === 404) {
-				$response = new sly_Response('', 404);
-				$response->send();
-				return;
-			}
+			$response = new sly_Response('', 404);
 		}
-
-		// let the core know where we are
-		$this->controller = $controller;
-		$this->action     = $action;
-
-		// notify the addOns
-		$this->notifySystemOfController();
-
-		// do it, baby
-		$content  = $this->dispatch($controller, $action);
-		$response = $container->getResponse(); // re-fetch the current global response
-
-		// if we got a string, wrap it in the layout and then in the response object
-		if (is_string($content)) {
-			$this->handleStringResponse($response, $content);
-		}
-
-		// if we got a response, use that one
-		elseif ($content instanceof sly_Response) {
-			$response = $content;
-		}
-
-		// everything else is a bug
-		else {
-			throw new LogicException('Controllers must return either content as a string or a Response, got '.gettype($content).'.');
+		catch (Exception $e) {
+			$response = new sly_Response('Internal Error', 500);
 		}
 
 		// send the response :)
@@ -122,12 +78,41 @@ class sly_App_Frontend extends sly_App_Base {
 		return $this->action;
 	}
 
-	protected function handleControllerError(Exception $e, $controller, $action) {
-		// throw away all content (including notices and warnings)
-		while (ob_get_level()) ob_end_clean();
+	protected function performRouting() {
+		// create new router and hand it to all addOns
+		$container = $this->getContainer();
+		$router    = $this->prepareRouter($container);
+		$request   = $container->getRequest();
 
-		// call the system error handler
-		$handler = $this->getContainer()->getErrorHandler();
-		$handler->handleException($e); // dies away (does not use sly_Response)
+		// use the router to prepare the request and setup proper query string values
+		$router->match($request);
+
+		$controller = $request->request(self::CONTROLLER_PARAM, 'string', 'article');
+		$action     = $request->request(self::ACTION_PARAM, 'string', 'index');
+
+		// test the controller name
+		$dispatcher = $this->getDispatcher();
+		$className  = $dispatcher->getControllerClass($controller);
+
+		// boom
+		$dispatcher->getController($className);
+
+		// let the core know where we are
+		$this->controller = $controller;
+		$this->action     = $action;
+	}
+
+	protected function prepareRouter(sly_Container $container) {
+		// find controller
+		$router = new sly_Router_Base();
+
+		// let addOns extend our router rule set
+		$router = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
+
+		if (!($router instanceof sly_Router_Interface)) {
+			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
+		}
+
+		return $router;
 	}
 }
