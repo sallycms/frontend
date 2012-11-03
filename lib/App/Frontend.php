@@ -78,41 +78,19 @@ class sly_App_Frontend extends sly_App_Base {
 		return $this->action;
 	}
 
-	protected function performRouting() {
-		// create new router and hand it to all addOns
-		$container = $this->getContainer();
-		$router    = $this->prepareRouter($container);
-		$request   = $container->getRequest();
+	protected function getControllerFromRequest(sly_Request $request) {
+		return $request->request(self::CONTROLLER_PARAM, 'string', 'article');
+	}
 
-		// use the router to prepare the request and setup proper query string values
-		$router->match($request);
-
-		$controller = $request->request(self::CONTROLLER_PARAM, 'string', 'article');
-		$action     = $request->request(self::ACTION_PARAM, 'string', 'index');
-
-		// test the controller name
-		$dispatcher = $this->getDispatcher();
-		$className  = $dispatcher->getControllerClass($controller);
-
-		// boom
-		$dispatcher->getController($className);
-
-		// let the core know where we are
-		$this->controller = $controller;
-		$this->action     = $action;
+	protected function getActionFromRequest(sly_Request $request) {
+		return $request->request(self::ACTION_PARAM, 'string', 'index');
 	}
 
 	protected function prepareRouter(sly_Container $container) {
-		// find controller
+		// use the basic router
 		$router = new sly_Router_Base();
 
 		// let addOns extend our router rule set
-		$router = $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
-
-		if (!($router instanceof sly_Router_Interface)) {
-			throw new LogicException('Expected a sly_Router_Interface as the result from SLY_FRONTEND_ROUTER.');
-		}
-
-		return $router;
+		return $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
 	}
 }
