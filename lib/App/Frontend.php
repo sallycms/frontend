@@ -46,7 +46,8 @@ class sly_App_Frontend extends sly_App_Base {
 	public function run() {
 		try {
 			// resolve URL and find controller
-			$this->performRouting();
+			$container = $this->getContainer();
+			$this->performRouting($container->getRequest());
 
 			// notify the addOns
 			$this->notifySystemOfController();
