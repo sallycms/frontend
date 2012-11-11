@@ -1,0 +1,30 @@
+{
+    "name": "sallycms/frontend",
+    "description": "Frontend Application for SallyCMS, handling articles, assets and custom routes.",
+    "type": "sallycms-app",
+    "keywords": [
+        "cms",
+        "php",
+        "mysql",
+        "frontend",
+        "sallycms"
+    ],
+    "authors": [
+        {
+            "name": "webvariants GbR",
+            "homepage": "http://www.webvariants.de/"
+        }
+    ],
+    "homepage": "http://www.sallycms.de/",
+    "license": "MIT",
+    "require": {
+        "php": ">=5.2.1",
+        "sallycms/core": "0.8.x-dev",
+        "sallycms/composer-installer": "*"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-default": "0.8.x-dev"
+        }
+    }
+}
