@@ -7,5 +7,7 @@ condition_handlers_empty_result: 'By applying all condititions handlers for "{0}
 name_contains_invalid_characters: The internal name contains invalid characters!
 not_all_requirements_met: Not all requirements have been met!
 no_condition_handler_found: No valid condition handler could be found!
+redirect_to: 'Redirect to <a href="{0}">{0}</a>.'
+redirect_notfound: 'No URI for redirect given.'
 operation_requires_user_context: 'The operation {0} requires a user context!'
 an_operation_requires_user_context: This operation requires a user context!

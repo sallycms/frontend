@@ -7,5 +7,7 @@ condition_handlers_empty_result: 'Durch Anwendung der Condition-Handler für "{0
 name_contains_invalid_characters: Der interne Name enthält ungültige Zeichen.
 not_all_requirements_met: Es sind nicht alle Abhängigkeiten erfüllt.
 no_condition_handler_found: Es wurde kein Condition-Handler gefunden.
+redirect_to: 'Weiterleitung nach <a href="{0}">{0}</a>.'
+redirect_notfound: 'Es wurde keine URL zur Weiterleitung angegeben.'
 operation_requires_user_context: 'Die Operation {0} erfordert einen Nutzerkontext!'
 an_operation_requires_user_context: Diese Operation erfordert einen Nutzerkontext!
