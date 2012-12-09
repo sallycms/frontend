@@ -23,7 +23,7 @@ class sly_App_Frontend extends sly_App_Base {
 
 		// Setup?
 		if (!$request->get->has('sly_asset') && $isSetup) {
-			$target = $request->getBaseUrl(true).'/backend/';
+			$target = $request->getBaseUrl(true).'/setup/';
 			$text   = 'Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.';
 
 			sly_Util_HTTP::tempRedirect($target, array(), $text);
