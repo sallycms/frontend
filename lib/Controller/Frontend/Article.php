@@ -18,10 +18,10 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	public function indexAction() {
 		$article = $this->findArticle();
 
-		if ($article) {
-			// preselect the HTTP response code
-			$this->prepareResponse($article);
+		// preselect the HTTP response code
+		$response = $this->prepareResponse($article);
 
+		if ($article) {
 			// set the article data in sly_Core
 			sly_Core::setCurrentArticleId($article->getId());
 			sly_Core::setCurrentClang($article->getClang());
@@ -39,14 +39,14 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 
 			// article postprocessing is a special task, so here's a special event
 			$output = sly_Core::dispatcher()->filter('SLY_ARTICLE_OUTPUT', $output, compact('article'));
-
-			// and print it
-			print $output;
 		}
 		else {
 			// If we got here, not even the 404 article could be found. Ouch.
-			print t('no_startarticle', 'backend/index.php');
+			$output = t('no_startarticle', 'backend/index.php');
 		}
+
+		$response->setContent($output);
+		return $response;
 	}
 
 	protected function prepareResponse(sly_Model_Article $article) {
@@ -59,9 +59,11 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		}
 
 		// optionally send Last-Modified header
-		if ($lastMod === true || $lastMod === 'frontend') {
+		if ($article && ($lastMod === true || $lastMod === 'frontend')) {
 			$response->setLastModified($article->getUpdateDate());
 		}
+
+		return $response;
 	}
 
 	protected function findArticle() {
@@ -104,7 +106,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		// site's default language, possibly at least showing the requested article.
 
 		if (!sly_Util_Language::exists($clangID)) {
-			if (!$isStart) {
+			if (!$isStart && sly_Util_Language::isMultilingual()) {
 				$this->notFound = true;
 			}
 			$clangID = sly_Core::getDefaultClangId();
