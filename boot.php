@@ -9,7 +9,7 @@
  */
 
 // add the app
-sly_Loader::addLoadPath(SLY_SALLYFOLDER.'/frontend/lib/', 'sly_');
+sly_Loader::addLoadPath(SLY_SALLYFOLDER.'/frontend/lib/');
 
 // init the app
 $app = new sly_App_Frontend();
