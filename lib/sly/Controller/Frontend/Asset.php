@@ -9,6 +9,55 @@
  */
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
+	private static function setResponseHeaders(sly_Response $response, $etag = null, $type = null) {
+		$cacheControl = sly_Core::config()->get('asset_cache/control/default', null);
+
+		if ($cacheControl !== null) {
+			foreach ($cacheControl as $key => $value) {
+				$response->addCacheControlDirective($key, $value);
+			}
+		}
+		else {
+			// fallback to old config parameter
+			$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
+			$response->setHeader('Cache-Control', $cacheControl);
+		}
+
+		if ($type) {
+			$type         = explode('/', $type, 2);
+			$cacheControl = sly_Core::config()->get('asset_cache/control/'.$type[0], null);
+			
+			if ($cacheControl !== null) {
+				foreach ($cacheControl as $key => $value) {
+					$response->addCacheControlDirective($key, $value);
+				}
+			}
+
+			if (count($type) == 2) {
+				$cacheControl = sly_Core::config()->get('asset_cache/control/'.$type[0].'_'.$type[1], null);
+
+				if ($cacheControl !== null) {
+					foreach ($cacheControl as $key => $value) {
+						$response->addCacheControlDirective($key, $value);
+					}
+				}
+			}
+		}
+
+		$now     = time();
+		$expires = sly_Core::config()->get('asset_cache/expires', null);
+
+		$response->setLastModified($now);
+
+		if (is_int($expires)) {
+			$response->setExpires($now + $expires);
+		}
+
+		if ($etag) {
+			$response->setEtag($etag);
+		}
+	}
+
 	public function indexAction() {
 		$file = $this->getRequest()->get('sly_asset', 'string', '');
 
@@ -25,8 +74,19 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			$errorLevel   = error_reporting(0);
 			$encoding     = $this->getCacheEncoding();
 			$type         = sly_Util_Mime::getType($file);
-			$plainFile    = $service->process($file, $encoding);
-			$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
+			$etag         = sly_Core::config()->get('asset_cache/etag', false) && file_exists($file) ? md5_file($file) : null;
+
+			if ($etag) {
+				$ifNoneMatch = array_key_exists('HTTP_IF_NONE_MATCH', $_SERVER) ? $_SERVER['HTTP_IF_NONE_MATCH'] : null;
+
+				if ($ifNoneMatch && strpos($ifNoneMatch, '"'.$etag.'"') !== false) {
+					$responseMatch = new sly_Response('Not modified', 304);
+					self::setResponseHeaders($responseMatch, $etag, $type);
+					return $responseMatch;
+				}
+			}
+
+			$plainFile = $service->process($file, $encoding);
 
 			$lastError = error_get_last();
 			error_reporting($errorLevel);
@@ -37,6 +97,10 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			elseif ($plainFile instanceof sly_Response) {
 				return $plainFile;
 			}
+
+			$response = new sly_Response_Stream($plainFile, 200);
+			$response->setContentType($type, 'UTF-8');
+			self::setResponseHeaders($response, $etag, $type);
 
 			// if the file is protected, run the project specific checkpermission.php
 			if ($service->isProtected($file)) {
@@ -51,15 +115,11 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 					throw new sly_Authorisation_Exception('access forbidden');
 				}
 
-				if (strpos($cacheControl, 'private') === false) {
-					$cacheControl = $cacheControl ? "$cacheControl, private" : 'private';
+				if ($response->hasCacheControlDirective('public')) {
+					$response->removeCacheControlDirective('public');
 				}
+				$response->addCacheControlDirective('private');
 			}
-
-			$response = new sly_Response_Stream($plainFile, 200);
-			$response->setContentType($type, 'UTF-8');
-			$response->setHeader('Cache-Control', $cacheControl);
-			$response->setHeader('Last-Modified', date('r', time()));
 
 			if (!empty($lastError) && mb_strlen($lastError['message']) > 0) {
 				throw new sly_Exception($lastError['message'].' in '.$lastError['file'].' on line '.$lastError['line'].'.');
