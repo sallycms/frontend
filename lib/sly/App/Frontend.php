@@ -40,6 +40,10 @@ class sly_App_Frontend extends sly_App_Base {
 		$i18n = new sly_I18N(sly_Core::getDefaultLocale(), SLY_SALLYFOLDER.'/frontend/lang', false);
 		$container->setI18N($i18n);
 
+		// make sure to init the asset cache at least once, so the directories
+		// gets created and the Sally LESS listener is the first one
+		$container->getAssetService();
+
 		parent::initialize();
 	}
 
