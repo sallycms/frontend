@@ -26,7 +26,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		if ($type) {
 			$type         = explode('/', $type, 2);
 			$cacheControl = sly_Core::config()->get('asset_cache/control/'.$type[0], null);
-			
+
 			if ($cacheControl !== null) {
 				foreach ($cacheControl as $key => $value) {
 					$response->addCacheControlDirective($key, $value);

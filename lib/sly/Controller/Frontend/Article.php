@@ -49,7 +49,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		return $response;
 	}
 
-	protected function prepareResponse(sly_Model_Article $article) {
+	protected function prepareResponse(sly_Model_Article $article = null) {
 		$lastMod  = sly_Core::config()->get('USE_LAST_MODIFIED');
 		$response = sly_Core::getResponse();
 
