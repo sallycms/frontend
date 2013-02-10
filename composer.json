@@ -15,7 +15,7 @@
             "homepage": "http://www.webvariants.de/"
         }
     ],
-    "version": "0.8.x-dev",
+    "version": "0.8.0-RC1",
     "homepage": "http://www.sallycms.de/",
     "license": "MIT",
     "autoload": {
@@ -25,8 +25,8 @@
     },
     "require": {
         "php": ">=5.2.1",
-        "sallycms/core": "0.8.x-dev",
-        "sallycms/composer-installer": "~1.0"
+        "sallycms/core": "0.8.*@RC",
+        "sallycms/composer-installer": "~1.1"
     },
     "extra": {
         "branch-alias": {
