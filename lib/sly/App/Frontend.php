@@ -18,8 +18,12 @@ class sly_App_Frontend extends sly_App_Base {
 
 	public function initialize() {
 		$container = $this->getContainer();
-		$request   = $container->getRequest();
-		$isSetup   = sly_Core::isSetup();
+
+		// init basic error handling
+		$container->getErrorHandler()->init();
+
+		$request = $container->getRequest();
+		$isSetup = sly_Core::isSetup();
 
 		// Setup?
 		if (!$request->get->has('sly_asset') && $isSetup) {
