@@ -74,8 +74,8 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			throw new LogicException('Listeners to SLY_RESOLVE_ARTICLE are required to return a sly_Model_Article instance.');
 		}
 
-		// If no article could be found, display the not-found article.
-		if ($article === null) {
+		// If no article could be found or it has no template, display the not-found article.
+		if ($article === null || !$article->getTemplateName()) {
 			$this->notFound = true;
 			$article = sly_Util_Article::findById(sly_Core::getNotFoundArticleId(), sly_Core::getDefaultClangId());
 		}

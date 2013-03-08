@@ -41,8 +41,15 @@ class sly_App_Frontend extends sly_App_Base {
 		// are used before any frontend language detection is done (-> article
 		// controller), this is OK.
 
-		$i18n = new sly_I18N(sly_Core::getDefaultLocale(), SLY_SALLYFOLDER.'/frontend/lang', false);
-		$container->setI18N($i18n);
+		if ($container->has('sly-i18n')) {
+			$i18n = $container->getI18N();
+		}
+		else {
+			$i18n = new sly_I18N(sly_Core::getDefaultLocale(), null, false);
+			$container->setI18N($i18n);
+		}
+
+		$i18n->appendFile(SLY_SALLYFOLDER.'/frontend/lang');
 
 		// make sure to init the asset cache at least once, so the directories
 		// gets created and the Sally LESS listener is the first one
