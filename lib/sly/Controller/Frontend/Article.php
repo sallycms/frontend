@@ -12,7 +12,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	private $notFound = false;
 
 	public function __construct() {
-		sly_Core::dispatcher()->register('SLY_RESOLVE_ARTICLE', array($this, 'oldSchoolResolver'));
+		sly_Core::dispatcher()->addListener('SLY_RESOLVE_ARTICLE', array($this, 'oldSchoolResolver'));
 	}
 
 	public function indexAction() {
@@ -87,8 +87,9 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		return $this->notFound;
 	}
 
-	public function oldSchoolResolver(array $params) {
-		if ($params['subject']) return $params['subject'];
+	public function oldSchoolResolver($article) {
+		// if someone has already found an article, do nothing
+		if ($article) return $article;
 
 		// we need to know if the params are missing
 		$request   = $this->getRequest();
