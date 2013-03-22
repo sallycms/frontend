@@ -94,6 +94,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		$request   = $this->getRequest();
 		$articleID = $request->request('article_id', 'int');
 		$clangID   = $request->request('clang', 'int');
+		$revision  = $request->request('revision', 'int', sly_Service_Article::FIND_REVISION_ONLINE);
 		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
 
 		// it might be the startpage http://example.com/ which has no params
@@ -113,6 +114,6 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		}
 
 		// find the requested article (or give up by returning null)
-		return sly_Util_Article::findById($articleID, $clangID);
+		return sly_Util_Article::findById($articleID, $clangID, $revision);
 	}
 }
