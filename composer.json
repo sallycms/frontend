@@ -25,7 +25,7 @@
     },
     "require": {
         "php": ">=5.2.1",
-        "sallycms/core": "self.version",
+        "sallycms/core": "0.9.x-dev",
         "sallycms/composer-installer": "~1.1"
     },
     "extra": {
