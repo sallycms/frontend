@@ -65,7 +65,8 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			return new sly_Response('', 400);
 		}
 
-		$service = sly_Service_Factory::getAssetService();
+		$container = sly_Core::getContainer();
+		$service   = $container->getAssetService();
 
 		// "clear" any errors that might came up when detecting the timezone
 		if (error_get_last()) @trigger_error('', E_USER_NOTICE);
