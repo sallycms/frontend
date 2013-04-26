@@ -10,7 +10,9 @@
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	private static function setResponseHeaders(sly_Response $response, $etag = null, $type = null) {
-		$cacheControl = sly_Core::config()->get('asset_cache/control/default', null);
+		$container     = $this->getContainer();
+		$configuration = $container->getConfig();
+		$cacheControl  = $configuration->get('asset_cache/control/default', null);
 
 		if ($cacheControl !== null) {
 			foreach ($cacheControl as $key => $value) {
@@ -19,13 +21,13 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		}
 		else {
 			// fallback to old config parameter
-			$cacheControl = sly_Core::config()->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
+			$cacheControl = $configuration->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
 			$response->setHeader('Cache-Control', $cacheControl);
 		}
 
 		if ($type) {
 			$type         = explode('/', $type, 2);
-			$cacheControl = sly_Core::config()->get('asset_cache/control/'.$type[0], null);
+			$cacheControl = $configuration->get('asset_cache/control/'.$type[0], null);
 
 			if ($cacheControl !== null) {
 				foreach ($cacheControl as $key => $value) {
@@ -34,7 +36,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			}
 
 			if (count($type) == 2) {
-				$cacheControl = sly_Core::config()->get('asset_cache/control/'.$type[0].'_'.$type[1], null);
+				$cacheControl = $configuration->get('asset_cache/control/'.$type[0].'_'.$type[1], null);
 
 				if ($cacheControl !== null) {
 					foreach ($cacheControl as $key => $value) {
@@ -45,7 +47,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		}
 
 		$now     = time();
-		$expires = sly_Core::config()->get('asset_cache/expires', null);
+		$expires = $configuration->get('asset_cache/expires', null);
 
 		$response->setLastModified($now);
 
@@ -65,8 +67,9 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			return new sly_Response('', 400);
 		}
 
-		$container = sly_Core::getContainer();
-		$service   = $container->getAssetService();
+		$container     = $this->getContainer();
+		$configuration = $container->getConfig();
+		$service       = $container->getAssetService();
 
 		// "clear" any errors that might came up when detecting the timezone
 		if (error_get_last()) @trigger_error('', E_USER_NOTICE);
@@ -75,7 +78,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			$errorLevel   = error_reporting(0);
 			$encoding     = $this->getCacheEncoding();
 			$type         = sly_Util_Mime::getType($file);
-			$etag         = sly_Core::config()->get('asset_cache/etag', false) && file_exists($file) ? md5_file($file) : null;
+			$etag         = $configuration->get('asset_cache/etag', false) && file_exists($file) ? md5_file($file) : null;
 
 			if ($etag) {
 				$ifNoneMatch = array_key_exists('HTTP_IF_NONE_MATCH', $_SERVER) ? $_SERVER['HTTP_IF_NONE_MATCH'] : null;
