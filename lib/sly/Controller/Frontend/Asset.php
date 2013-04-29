@@ -9,7 +9,7 @@
  */
 
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
-	private static function setResponseHeaders(sly_Response $response, $etag = null, $type = null) {
+	private function setResponseHeaders(sly_Response $response, $etag = null, $type = null) {
 		$container     = $this->getContainer();
 		$configuration = $container->getConfig();
 		$cacheControl  = $configuration->get('asset_cache/control/default', null);
@@ -85,7 +85,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 
 				if ($ifNoneMatch && strpos($ifNoneMatch, '"'.$etag.'"') !== false) {
 					$responseMatch = new sly_Response('Not modified', 304);
-					self::setResponseHeaders($responseMatch, $etag, $type);
+					$this->setResponseHeaders($responseMatch, $etag, $type);
 					return $responseMatch;
 				}
 			}
@@ -104,7 +104,7 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 
 			$response = new sly_Response_Stream($plainFile, 200);
 			$response->setContentType($type, 'UTF-8');
-			self::setResponseHeaders($response, $etag, $type);
+			$this->setResponseHeaders($response, $etag, $type);
 
 			// if the file is protected, run the project specific checkpermission.php
 			if ($service->isProtected($file)) {
