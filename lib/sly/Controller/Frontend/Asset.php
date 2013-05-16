@@ -27,13 +27,18 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 			// check if the filetype may be accessed at all
 			// and check if the file is inside an allowed path
 
+			$file    = $this->normalizePath($file);
 			$service = $container->getAssetService();
 			$configs = $config->get('frontend/assets', array(
 				'etag'          => false,
 				'cache-control' => array(),
 				'expires'       => null,
-				'directories'   => array()
+				'directories'   => array(),
+				'rewrites'      => array()
 			));
+
+			// 'addon/sallycms/be-search/foo.css' =>
+			$file = $this->resolveRewrites($configs['rewrites'], $file);
 
 			$this->checkForBlockedExtensions($config, $file);
 			$this->checkForAllowedPath($configs['directories'], $file);
@@ -114,6 +119,16 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		return $response;
 	}
 
+	protected function resolveRewrites(array $rewrites, $file) {
+		foreach ($rewrites as $pattern => $replacement) {
+			if (preg_match($pattern, $file)) {
+				return preg_replace($pattern, SLY_BASE.'/'.$replacement, $file);
+			}
+		}
+
+		return SLY_BASE.'/'.$file;
+	}
+
 	protected function checkForBlockedExtensions(sly_Configuration $config, $file) {
 		$blocked = $config->get('blocked_extensions');
 
@@ -125,12 +140,11 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 	}
 
 	protected function checkForAllowedPath(array $allowed, $file) {
-		$normalized = Path::normalize($file);
-		$ok         = strpos($normalized, '/') === false; // allow files in root directory (favicon)
+		$ok = strpos($file, '/') === false; // allow files in root directory (favicon)
 
 		if (!$ok) {
 			foreach ($allowed as $path) {
-				if (sly_Util_String::startsWith($normalized, Path::normalize($path))) {
+				if (sly_Util_String::startsWith($file, $this->normalizePath($path))) {
 					$ok = true;
 					break;
 				}
@@ -189,5 +203,23 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 				$response->addCacheControlDirective($k, $value);
 			}
 		}
+	}
+
+	protected function normalizePath($path) {
+		$path = sly_Util_Directory::normalize($path);
+		$path = str_replace('..', '', $path);
+		$path = str_replace(DIRECTORY_SEPARATOR, '/', sly_Util_Directory::normalize($path));
+		$path = str_replace('./', '/', $path);
+		$path = str_replace(DIRECTORY_SEPARATOR, '/', sly_Util_Directory::normalize($path));
+
+		if (empty($path)) {
+			return '';
+		}
+
+		if ($path[0] === '/') {
+			$path = substr($path, 1);
+		}
+
+		return $path;
 	}
 }
