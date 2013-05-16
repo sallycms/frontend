@@ -8,125 +8,85 @@
  * http://www.opensource.org/licenses/mit-license.php
  */
 
+use Gaufrette\Util\Path;
+
 class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
-	private function setResponseHeaders(sly_Response $response, $etag = null, $type = null) {
-		$container     = $this->getContainer();
-		$configuration = $container->getConfig();
-		$cacheControl  = $configuration->get('asset_cache/control/default', null);
-
-		if ($cacheControl !== null) {
-			foreach ($cacheControl as $key => $value) {
-				$response->addCacheControlDirective($key, $value);
-			}
-		}
-		else {
-			// fallback to old config parameter
-			$cacheControl = $configuration->get('ASSETS_CACHE_CONTROL', 'max-age=29030401');
-			$response->setHeader('Cache-Control', $cacheControl);
-		}
-
-		if ($type) {
-			$type         = explode('/', $type, 2);
-			$cacheControl = $configuration->get('asset_cache/control/'.$type[0], null);
-
-			if ($cacheControl !== null) {
-				foreach ($cacheControl as $key => $value) {
-					$response->addCacheControlDirective($key, $value);
-				}
-			}
-
-			if (count($type) == 2) {
-				$cacheControl = $configuration->get('asset_cache/control/'.$type[0].'_'.$type[1], null);
-
-				if ($cacheControl !== null) {
-					foreach ($cacheControl as $key => $value) {
-						$response->addCacheControlDirective($key, $value);
-					}
-				}
-			}
-		}
-
-		$now     = time();
-		$expires = $configuration->get('asset_cache/expires', null);
-
-		$response->setLastModified($now);
-
-		if (is_int($expires)) {
-			$response->setExpires($now + $expires);
-		}
-
-		if ($etag) {
-			$response->setEtag($etag);
-		}
-	}
-
 	public function indexAction() {
-		$file = $this->getRequest()->get('sly_asset', 'string', '');
+		// retrieve filename
+
+		$request   = $this->getRequest();
+		$container = $this->getContainer();
+		$config    = $container->getConfig();
+		$file      = $request->get('sly_asset', 'string', '');
 
 		if (mb_strlen($file) === 0) {
 			return new sly_Response('', 400);
 		}
 
-		$container     = $this->getContainer();
-		$configuration = $container->getConfig();
-		$service       = $container->getAssetService();
-
-		// "clear" any errors that might came up when detecting the timezone
-		if (error_get_last()) @trigger_error('', E_USER_NOTICE);
-
 		try {
-			$errorLevel   = error_reporting(0);
-			$encoding     = $this->getCacheEncoding();
-			$type         = sly_Util_Mime::getType($file);
-			$etag         = $configuration->get('asset_cache/etag', false) && file_exists($file) ? md5_file($file) : null;
+			// check if the filetype may be accessed at all
+			// and check if the file is inside an allowed path
+
+			$service = $container->getAssetService();
+			$configs = $config->get('frontend/assets', array(
+				'etag'          => false,
+				'cache-control' => array(),
+				'expires'       => null,
+				'directories'   => array()
+			));
+
+			$this->checkForBlockedExtensions($config, $file);
+			$this->checkForAllowedPath($configs['directories'], $file);
+
+			$isProtected = $this->checkFilePermission($service, $file);
+
+			// "clear" any errors that might came up when detecting the timezone
+
+			if (error_get_last()) @trigger_error('', E_USER_NOTICE);
+			$errorLevel = error_reporting(0);
+
+			// check the ETag
+
+			$type = sly_Util_File::getMimetype($file);
+			$etag = $configs['etag'] && file_exists($file) ? md5_file($file) : null;
 
 			if ($etag) {
-				$ifNoneMatch = array_key_exists('HTTP_IF_NONE_MATCH', $_SERVER) ? $_SERVER['HTTP_IF_NONE_MATCH'] : null;
+				$etags = $request->getETags();
 
-				if ($ifNoneMatch && strpos($ifNoneMatch, '"'.$etag.'"') !== false) {
-					$responseMatch = new sly_Response('Not modified', 304);
-					$this->setResponseHeaders($responseMatch, $etag, $type);
-					return $responseMatch;
+				if (in_array('"'.$etag.'"', $etags)) {
+					$response = new sly_Response('Not modified', 304);
+					$this->setResponseHeaders($response, $etag, $type);
+
+					return $response;
 				}
 			}
 
-			$plainFile = $service->process($file, $encoding);
+			// process the file
 
-			$lastError = error_get_last();
+			$resultFile = $service->process($file);
+			$lastError  = error_get_last();
+
 			error_reporting($errorLevel);
-
-			if ($plainFile === null) {
-				return new sly_Response('', 404);
-			}
-			elseif ($plainFile instanceof sly_Response) {
-				return $plainFile;
-			}
-
-			$response = new sly_Response_Stream($plainFile, 200);
-			$response->setContentType($type, 'UTF-8');
-			$this->setResponseHeaders($response, $etag, $type);
-
-			// if the file is protected, run the project specific checkpermission.php
-			if ($service->isProtected($file)) {
-				$allowAccess = false;
-				$checkScript = SLY_DEVELOPFOLDER.'/checkpermission.php';
-
-				if (file_exists($checkScript)) {
-					include $checkScript;
-				}
-
-				if (!$allowAccess) {
-					throw new sly_Authorisation_Exception('access forbidden');
-				}
-
-				if ($response->hasCacheControlDirective('public')) {
-					$response->removeCacheControlDirective('public');
-				}
-				$response->addCacheControlDirective('private');
-			}
 
 			if (!empty($lastError) && mb_strlen($lastError['message']) > 0) {
 				throw new sly_Exception($lastError['message'].' in '.$lastError['file'].' on line '.$lastError['line'].'.');
+			}
+
+			// prepare the response
+
+			$response = new sly_Response_Stream($resultFile, 200);
+			$response->setContentType($type, 'UTF-8');
+
+			$this->setResponseHeaders($response, $etag, $type);
+
+			// if the file is protected, mark the response as private
+
+			if ($isProtected) {
+				if ($response->hasCacheControlDirective('public')) {
+					$response->removeCacheControlDirective('public');
+				}
+
+				$response->addCacheControlDirective('private');
 			}
 		}
 		catch (Exception $e) {
@@ -134,13 +94,13 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 
 			if ($e instanceof sly_Authorisation_Exception) {
 				$response->setStatusCode(403);
-				$response->setHeader('Cache-Control', 'private');
+				$response->addCacheControlDirective('private');
 			}
 			else {
 				$response->setStatusCode(500);
 			}
 
-			if (sly_Core::isDeveloperMode() || $e instanceof sly_Authorisation_Exception) {
+			if ($container->get('sly-environment') !== 'dev' || $e instanceof sly_Authorisation_Exception) {
 				$response->setContent($e->getMessage());
 			}
 			else {
@@ -154,37 +114,80 @@ class sly_Controller_Frontend_Asset extends sly_Controller_Frontend_Base {
 		return $response;
 	}
 
-	/**
-	 * get the encoding to use for caching
-	 *
-	 * The encoding (gzip, deflate or plain) can differ from the client's
-	 * Accept-Encoding header and is determined by the asset cache's .htaccess
-	 * file. If no mod_headers is available, the encoding is set to plain to make
-	 * the service put the file at the correct location (so the rewrite rules can
-	 * find it for following requests). However, the client can and probably will
-	 * receive a gzip'ed response, since the contents we send him is only
-	 * determined by the Accept-Encoding header.
-	 *
-	 * So this method returns the encoding that should be used for caching, *not*
-	 * for sending the content to the client. The client encoding is set in
-	 * sly_Response_Stream via output buffers.
-	 *
-	 * @return string  either 'plain', 'gzip' or 'deflate'
-	 */
-	private function getCacheEncoding() {
-		// first and second one are normal possibilities, the third one is for special cases like 1&1...
-		$keys = array('HTTP_ENCODING_CACHEDIR', 'REDIRECT_HTTP_ENCODING_CACHEDIR', 'REDIRECT_REDIRECT_HTTP_ENCODING_CACHEDIR');
-		$enc  = 'plain';
+	protected function checkForBlockedExtensions(sly_Configuration $config, $file) {
+		$blocked = $config->get('blocked_extensions');
 
-		foreach ($keys as $key) {
-			if (isset($_SERVER[$key])) {
-				$enc = $_SERVER[$key];
-				break;
+		foreach ($blocked as $ext) {
+			if (sly_Util_String::endsWith($file, $ext)) {
+				throw new sly_Authorisation_Exception('Forbidden');
+			}
+		}
+	}
+
+	protected function checkForAllowedPath(array $allowed, $file) {
+		$normalized = Path::normalize($file);
+		$ok         = strpos($normalized, '/') === false; // allow files in root directory (favicon)
+
+		if (!$ok) {
+			foreach ($allowed as $path) {
+				if (sly_Util_String::startsWith($normalized, Path::normalize($path))) {
+					$ok = true;
+					break;
+				}
+			}
+
+			if (!$ok) {
+				throw new sly_Authorisation_Exception('Forbidden');
+			}
+		}
+	}
+
+	protected function checkFilePermission(sly_Asset_Service $service, $file) {
+		$isProtected = $service->isProtected($file);
+
+		if ($isProtected && !$service->checkPermission($file)) {
+			throw new sly_Authorisation_Exception('access forbidden');
+		}
+
+		return $isProtected;
+	}
+
+	protected function setResponseHeaders(array $config, sly_Response $response, $etag = null, $type = null) {
+		$cacheControl = $config['cache-control'];
+
+		$this->addCacheControlDirective($cacheControl, 'default', $response);
+
+		// add type-specific cache-control headers
+
+		if ($type) {
+			$type = explode('/', $type, 2);
+
+			$this->addCacheControlDirective($cacheControl, $type[0], $response);
+
+			if (count($type) == 2) {
+				$this->addCacheControlDirective($cacheControl, $type[0].'_'.$type[1], $response);
 			}
 		}
 
-		$enc = strtolower(trim($enc, '/'));
+		$now     = time();
+		$expires = $config['expires'];
 
-		return in_array($enc, array('gzip', 'deflate', 'plain')) ? $enc : 'plain';
+		$response->setLastModified($now);
+
+		if (is_int($expires)) {
+			$response->setExpires($now + $expires);
+		}
+
+		if ($etag) {
+			$response->setEtag($etag);
+		}
+	}
+
+	protected function addCacheControlDirective(array $cacheControl, $key, sly_Response $response) {
+		if (isset($cacheControl[$key])) {
+			foreach ($cacheControl[$key] as $k => $value) {
+				$response->addCacheControlDirective($k, $value);
+			}
+		}
 	}
 }
