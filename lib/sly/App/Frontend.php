@@ -18,15 +18,12 @@ class sly_App_Frontend extends sly_App_Base {
 
 	public function initialize() {
 		$container = $this->getContainer();
+		$request   = $container->getRequest();
 
 		// init basic error handling
 		$container->getErrorHandler()->init();
 
-		$request = $container->getRequest();
-		$isSetup = sly_Core::isSetup();
-
-		// Setup?
-		if (!$request->get->has('sly_asset') && $isSetup) {
+		if (sly_Core::isSetup()) {
 			$target = $request->getBaseUrl(true).'/setup/';
 			$text   = 'Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.';
 
