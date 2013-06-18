@@ -94,7 +94,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		// we need to know if the params are missing
 		$request   = $this->getRequest();
 		$articleID = $request->request('article_id', 'int');
-		$clangID   = $request->request('clang', 'int');
+		$clangID   = $request->request('clang', 'int', $this->getContainer()->getConfig()->get('default_clang_id'));
 		$revision  = $request->request('revision', 'int', sly_Service_Article::FIND_REVISION_ONLINE);
 		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
 
