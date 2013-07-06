@@ -75,9 +75,13 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		}
 
 		// If no article could be found or it has no template, display the not-found article.
+		// Try to use the current language, maybe a resolver did not detect the article, but
+		// is pretty sure about the requested language.
 		if ($article === null || !$article->getTemplateName()) {
 			$this->notFound = true;
-			$article = sly_Util_Article::findById(sly_Core::getNotFoundArticleId(), sly_Core::getDefaultClangId());
+
+			$clang   = sly_Core::getCurrentClang();
+			$article = sly_Util_Article::findById(sly_Core::getNotFoundArticleId(), $clang === null ? sly_Core::getDefaultClangId() : $clang);
 		}
 
 		return $article;
