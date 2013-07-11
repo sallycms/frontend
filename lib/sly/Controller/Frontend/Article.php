@@ -38,10 +38,15 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			$container['sly-dispatcher']->notify('SLY_CURRENT_ARTICLE', $article);
 
 			// finally run the template and generate the output
-			$output = $article->getArticleTemplate();
+			if (!$article->getTemplateName()) {
+				$output = t('no_template_set');
+			}
+			else {
+				$output = $article->getArticleTemplate();
 
-			// article postprocessing is a special task, so here's a special event
-			$output = $container['sly-dispatcher']->filter('SLY_ARTICLE_OUTPUT', $output, compact('article'));
+				// article postprocessing is a special task, so here's a special event
+				$output = $container['sly-dispatcher']->filter('SLY_ARTICLE_OUTPUT', $output, compact('article'));
+			}
 		}
 		else {
 			// If we got here, not even the 404 article could be found. Ouch.
@@ -77,10 +82,10 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			throw new LogicException('Listeners to SLY_RESOLVE_ARTICLE are required to return a sly_Model_Article instance.');
 		}
 
-		// If no article could be found or it has no template, display the not-found article.
+		// If no article could be found, display the not-found article.
 		// Try to use the current language, maybe a resolver did not detect the article, but
 		// is pretty sure about the requested language.
-		if ($article === null || !$article->getTemplateName()) {
+		if ($article === null) {
 			$this->notFound = true;
 
 			$clang   = sly_Core::getCurrentClang();
