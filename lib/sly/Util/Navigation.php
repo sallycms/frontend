@@ -63,7 +63,9 @@ class sly_Util_Navigation {
 	 */
 	protected function getActivePathArray() {
 		if (!isset($this->activePathIds)) {
-			$parts = explode('|', sly_Util_Article::findById($this->activeArticleId)->getPath().$this->activeArticleId);
+			// fetch the latest revision: we only care about the path (i.e. the article structure) and the
+			// path is the same in all revisions anyway.
+			$parts = explode('|', sly_Util_Article::findById($this->activeArticleId, null, sly_Service_Article::FIND_REVISION_LATEST)->getPath().$this->activeArticleId);
 			$this->activePathIds = array_filter($parts);
 		}
 		return $this->activePathIds;
