@@ -12,7 +12,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	private $notFound = false;
 
 	public function __construct() {
-		sly_Core::dispatcher()->register('SLY_RESOLVE_ARTICLE', array($this, 'oldSchoolResolver'));
+		sly_Core::dispatcher()->addListener('SLY_RESOLVE_ARTICLE', array($this, 'oldSchoolResolver'));
 	}
 
 	public function indexAction() {
@@ -27,6 +27,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			// set the article data in sly_Core
 			$container->setCurrentArticleId($article->getId());
 			$container->setCurrentLanguageId($article->getClang());
+			$container->setCurrentArticleRevision($article->getRevision());
 
 			// now that we know the frontend language, init the global i18n object
 			$i18n = $container['sly-i18n'];
@@ -99,17 +100,21 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	}
 
 	public function setIsNotFound($isNotFound = true) {
-		$this->notFound = $isNotFound;
+		$this->notFound = !!$isNotFound;
 	}
 
-	public function oldSchoolResolver(array $params) {
-		if ($params['subject']) return $params['subject'];
+	public function oldSchoolResolver($article) {
+		// if someone has already found an article, do nothing
+		if ($article) return $article;
+
+		$best = sly_Service_Article::FIND_REVISION_BEST;
 
 		// we need to know if the params are missing
 		$request   = $this->getRequest();
 		$articleID = $request->request('article_id', 'int');
-		$clangID   = $request->request('clang', 'int');
-		$isStart   = dirname($_SERVER['PHP_SELF']).'/' === $_SERVER['REQUEST_URI'];
+		$clangID   = $request->request('clang', 'int', $this->getContainer()->getConfig()->get('default_clang_id'));
+		$revision  = $request->request('revision', 'int', $best);
+		$isStart   = rtrim(dirname($_SERVER['PHP_SELF']), '/').'/' === $_SERVER['REQUEST_URI'];
 
 		// it might be the startpage http://example.com/ which has no params
 		if ($articleID === null && $isStart) {
@@ -119,7 +124,6 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		// A wrong language counts as not found!
 		// But since we're nice people, we won't just give up and try to use the
 		// site's default language, possibly at least showing the requested article.
-
 		if (!sly_Util_Language::exists($clangID)) {
 			if (!$isStart && sly_Util_Language::isMultilingual()) {
 				$this->notFound = true;
@@ -127,7 +131,29 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			$clangID = sly_Core::getDefaultClangId();
 		}
 
+		// setting a specific revision is only allowed to authenticated users with the appropriate permissions
+		if ($revision !== $best) {
+			// if there's a cookie, start the session
+			sly_Util_Session::start(true);
+
+			$user    = $this->getContainer()->get('sly-service-user')->getCurrentUser();
+			$canRead = false;
+
+			if ($user) {
+				if ($user->isAdmin()) {
+					$canRead = true;
+				}
+				elseif (class_exists('sly_Backend_Authorisation_Util')) { // do not create a hard dependency on the backend app
+					$canRead = sly_Backend_Authorisation_Util::canReadArticle($user, $articleID);
+				}
+			}
+
+			if (!$canRead) {
+				$revision = $best;
+			}
+		}
+
 		// find the requested article (or give up by returning null)
-		return sly_Util_Article::findById($articleID, $clangID);
+		return sly_Util_Article::findById($articleID, $clangID, $revision);
 	}
 }

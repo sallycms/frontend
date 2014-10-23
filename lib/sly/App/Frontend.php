@@ -12,21 +12,20 @@ class sly_App_Frontend extends sly_App_Base {
 	const CONTROLLER_PARAM = 'slycontroller';  ///< string  the request param that contains the page
 	const ACTION_PARAM     = 'slyaction';      ///< string  the request param that contains the action
 
+	protected $dispatcher;
+
 	public function isBackend() {
 		return false;
 	}
 
 	public function initialize() {
 		$container = $this->getContainer();
+		$request   = $container->getRequest();
 
 		// init basic error handling
 		$container->getErrorHandler()->init();
 
-		$request = $container->getRequest();
-		$isSetup = sly_Core::isSetup();
-
-		// Setup?
-		if (!$request->get->has('sly_asset') && $isSetup) {
+		if (sly_Core::isSetup()) {
 			$target = $request->getBaseUrl(true).'/setup/';
 			$text   = 'Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.';
 
@@ -50,10 +49,6 @@ class sly_App_Frontend extends sly_App_Base {
 		}
 
 		$i18n->appendFile(SLY_SALLYFOLDER.'/frontend/lang');
-
-		// make sure to init the asset cache at least once, so the directories
-		// gets created and the Sally LESS listener is the first one
-		$container->getAssetService();
 
 		parent::initialize();
 	}
@@ -82,10 +77,6 @@ class sly_App_Frontend extends sly_App_Base {
 		$response->send();
 	}
 
-	public function getControllerClassPrefix() {
-		return 'sly_Controller_Frontend';
-	}
-
 	public function getCurrentControllerName() {
 		return $this->controller;
 	}
@@ -108,5 +99,18 @@ class sly_App_Frontend extends sly_App_Base {
 
 		// let addOns extend our router rule set
 		return $container->getDispatcher()->filter('SLY_FRONTEND_ROUTER', $router, array('app' => $this));
+	}
+
+	/**
+	 * get request dispatcher
+	 *
+	 * @return sly_Dispatcher
+	 */
+	protected function getDispatcher() {
+		if ($this->dispatcher === null) {
+			$this->dispatcher = new sly_Dispatcher_Frontend($this->getContainer());
+		}
+
+		return $this->dispatcher;
 	}
 }
