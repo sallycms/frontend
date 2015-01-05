@@ -48,11 +48,11 @@ class sly_Util_Navigation {
 	public function __construct($depth = 1, $fullNavigation = false, $useHTMLSpecialchars = true, $baseCategories = null, $activeArticleId = null) {
 		$this->maxDepth            = $depth;
 		$this->useHTMLSpecialchars = $useHTMLSpecialchars;
-		$this->activeArticleId     = is_null($activeArticleId) ? sly_Core::getCurrentArticleId() : $activeArticleId;
+		$this->activeArticleId     = is_null($activeArticleId) ?: sly_Core::getCurrentArticleId();
 		$this->startArticleId      = sly_Core::getSiteStartArticleId();
 		$this->isStartClang        = sly_Core::getDefaultClangId() == sly_Core::getCurrentClang();
 
-		$baseCategories = is_null($baseCategories) ? sly_Util_Category::getRootCategories(true) : $baseCategories;
+		$baseCategories = is_null($baseCategories) ?: sly_Util_Category::getRootCategories(true);
 		$this->generateNavigation($baseCategories, $fullNavigation);
 	}
 

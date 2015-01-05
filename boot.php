@@ -10,7 +10,7 @@
 
 // init the app
 $app = new sly_App_Frontend();
-sly_Core::setCurrentApp($app);
+$container->set('sly-app', $app);
 $app->initialize();
 
 // ... and run it

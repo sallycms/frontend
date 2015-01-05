@@ -21,11 +21,12 @@ class sly_App_Frontend extends sly_App_Base {
 	public function initialize() {
 		$container = $this->getContainer();
 		$request   = $container->getRequest();
+		$config    = $container->getConfig();
 
 		// init basic error handling
 		$container->getErrorHandler()->init();
 
-		if (sly_Core::isSetup()) {
+		if ($config->get('setup', true) === true) {
 			$target = $request->getBaseUrl(true).'/setup/';
 			$text   = 'Bitte führe das <a href="'.sly_html($target).'">Setup</a> aus, um SallyCMS zu nutzen.';
 
@@ -44,7 +45,7 @@ class sly_App_Frontend extends sly_App_Base {
 			$i18n = $container->getI18N();
 		}
 		else {
-			$i18n = new sly_I18N(sly_Core::getDefaultLocale(), null, false);
+			$i18n = new sly_I18N($config->get('default_locale'), null, false);
 			$container->setI18N($i18n);
 		}
 
