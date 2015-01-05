@@ -58,7 +58,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 	}
 
 	protected function prepareResponse(sly_Model_Article $article = null) {
-		$lastMod  = sly_Core::config()->get('USE_LAST_MODIFIED');
+		$lastMod  = sly_Core::config()->get('use_last_modified');
 		$response = sly_Core::getResponse();
 
 		// handle 404
