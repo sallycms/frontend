@@ -9,7 +9,7 @@
  */
 
 // init the app
-$app = new sly_App_Frontend();
+$app = new sly_App_Frontend($container);
 $container->set('sly-app', $app);
 $app->initialize();
 

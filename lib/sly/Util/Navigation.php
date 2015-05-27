@@ -35,8 +35,6 @@ class sly_Util_Navigation {
 	protected $maxDepth;             ///< int
 	protected $useHTMLSpecialchars;  ///< boolean
 	protected $activeArticleId;      ///< int
-	protected $startArticleId;       ///< int
-	protected $isStartClang;         ///< boolean
 
 	/**
 	 * @param int     $depth
@@ -49,8 +47,6 @@ class sly_Util_Navigation {
 		$this->maxDepth            = $depth;
 		$this->useHTMLSpecialchars = $useHTMLSpecialchars;
 		$this->activeArticleId     = is_null($activeArticleId) ?: sly_Core::getCurrentArticleId();
-		$this->startArticleId      = sly_Core::getSiteStartArticleId();
-		$this->isStartClang        = sly_Core::getDefaultClangId() == sly_Core::getCurrentClang();
 
 		$baseCategories = is_null($baseCategories) ?: sly_Util_Category::getRootCategories(true);
 		$this->generateNavigation($baseCategories, $fullNavigation);
@@ -213,12 +209,7 @@ class sly_Util_Navigation {
 	 * @return string
 	 */
 	protected function getCategoryUrl(sly_Model_Category $category) {
-		if ($this->isStartClang && $this->startArticleId == $category->getId()) {
-			return './';
-		}
-		else {
-			return $category->getUrl();
-		}
+		return $category->getUrl();
 	}
 
 	/**
