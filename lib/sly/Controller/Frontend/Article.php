@@ -112,14 +112,11 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 		// if someone has already found an article, do nothing
 		if ($article) return $article;
 
-		$best = sly_Service_Article::FIND_REVISION_BEST;
-
 		// we need to know if the params are missing
 		$request   = $this->getRequest();
 		$config    = $this->getContainer()->getConfig();
 		$articleID = $request->request('article_id', 'int');
 		$clangID   = $request->request('clang', 'int', $config->get('default_clang_id'));
-		$revision  = $request->request('revision', 'int', $best);
 		$isStart   = rtrim(dirname($_SERVER['PHP_SELF']), '/').'/' === $_SERVER['REQUEST_URI'];
 
 		// it might be the startpage http://example.com/ which has no params
@@ -137,29 +134,7 @@ class sly_Controller_Frontend_Article extends sly_Controller_Frontend_Base {
 			$clangID = $config->get('default_clang_id');
 		}
 
-		// setting a specific revision is only allowed to authenticated users with the appropriate permissions
-		if ($revision !== $best) {
-			// if there's a cookie, start the session
-			sly_Util_Session::start(true);
-
-			$user    = $this->getContainer()->get('sly-service-user')->getCurrentUser();
-			$canRead = false;
-
-			if ($user) {
-				if ($user->isAdmin()) {
-					$canRead = true;
-				}
-				elseif (class_exists('sly_Backend_Authorisation_Util')) { // do not create a hard dependency on the backend app
-					$canRead = sly_Backend_Authorisation_Util::canReadArticle($user, $articleID);
-				}
-			}
-
-			if (!$canRead) {
-				$revision = $best;
-			}
-		}
-
 		// find the requested article (or give up by returning null)
-		return sly_Util_Article::findById($articleID, $clangID, $revision);
+		return sly_Util_Article::findById($articleID, $clangID);
 	}
 }
