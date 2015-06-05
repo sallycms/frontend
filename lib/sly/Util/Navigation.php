@@ -48,7 +48,7 @@ class sly_Util_Navigation {
 		$this->useHTMLSpecialchars = $useHTMLSpecialchars;
 		$this->activeArticleId     = is_null($activeArticleId) ?: sly_Core::getCurrentArticleId();
 
-		$baseCategories = is_null($baseCategories) ?: sly_Util_Category::getRootCategories(true);
+		$baseCategories = !is_null($baseCategories) ? $baseCategories : sly_Util_Category::getRootCategories(true);
 		$this->generateNavigation($baseCategories, $fullNavigation);
 	}
 
