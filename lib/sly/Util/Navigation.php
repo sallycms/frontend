@@ -46,7 +46,7 @@ class sly_Util_Navigation {
 	public function __construct($depth = 1, $fullNavigation = false, $useHTMLSpecialchars = true, $baseCategories = null, $activeArticleId = null) {
 		$this->maxDepth            = $depth;
 		$this->useHTMLSpecialchars = $useHTMLSpecialchars;
-		$this->activeArticleId     = is_null($activeArticleId) ?: sly_Core::getCurrentArticleId();
+		$this->activeArticleId     = !is_null($activeArticleId) ? $activeArticleId : sly_Core::getCurrentArticleId();
 
 		$baseCategories = !is_null($baseCategories) ? $baseCategories : sly_Util_Category::getRootCategories(true);
 		$this->generateNavigation($baseCategories, $fullNavigation);
@@ -57,11 +57,11 @@ class sly_Util_Navigation {
 	 *
 	 * @return array
 	 */
-	protected function getActivePathArray() {
+	protected function getActivePathArray() {		
 		if (!isset($this->activePathIds)) {
 			// fetch the latest revision: we only care about the path (i.e. the article structure) and the
 			// path is the same in all revisions anyway.
-			$parts = explode('|', sly_Util_Article::findById($this->activeArticleId, null, sly_Service_Article::FIND_REVISION_LATEST)->getPath().$this->activeArticleId);
+			$parts = explode('|', sly_Util_Article::findById($this->activeArticleId, null, sly_Service_Article::FIND_REVISION_LATEST)->getPath().'|'.$this->activeArticleId);
 			$this->activePathIds = array_filter($parts);
 		}
 		return $this->activePathIds;
